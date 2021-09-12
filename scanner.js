@@ -44,13 +44,13 @@ async function work() {
 
     for (let address of sep20s.keys()) {
         console.log('scanning ' + address);
-        await getSep20Info(address, sep20s[address], blockNum)
+        await getSep20Info(address, sep20s.get(address), blockNum)
     }
-    await getSep20Info('0x1a581bdF6b5746440DDd2f8B7d613D5E21641972', 1, blockNum)
     console.log('finish scanning!')
 }
 
 async function getSep20Info(sep20Address, createdBlockNum, latestBlockNum) {
+    console.log(createdBlockNum)
     let accounts = new Map()
     let startBlockNum = createdBlockNum
     let filter = {
