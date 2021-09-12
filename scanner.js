@@ -46,12 +46,13 @@ async function work() {
         console.log('scanning ' + address);
         await getSep20Info(address, sep20s[address], blockNum)
     }
+    await getSep20Info('0x1a581bdF6b5746440DDd2f8B7d613D5E21641972', 1, blockNum)
     console.log('finish scanning!')
 }
 
 async function getSep20Info(sep20Address, createdBlockNum, latestBlockNum) {
     let accounts = new Map()
-    let startBlockNum = 200000
+    let startBlockNum = createdBlockNum
     let filter = {
         address: sep20Address,
         topics: [
@@ -70,11 +71,34 @@ async function getSep20Info(sep20Address, createdBlockNum, latestBlockNum) {
     }
 
     const sep20Contract = new ethers.Contract(sep20Address, SEP20ABI, Provider);
-    const decimals = await sep20Contract.decimals()
-    const symbol = await sep20Contract.symbol()
-    const name = await sep20Contract.name()
-    const totalSupply = await sep20Contract.totalSupply()
-
+    let decimals
+    try {
+        decimals = await sep20Contract.decimals()
+    } catch (error) {
+        console.log(error)
+        return
+    }
+    let name
+    try {
+        name = await sep20Contract.name()
+    } catch (error) {
+        console.log(error)
+        return
+    }
+    let symbol
+    try {
+        symbol = await sep20Contract.symbol()
+    } catch (error) {
+        console.log(error)
+        return
+    }
+    let totalSupply
+    try {
+        totalSupply = await sep20Contract.totalSupply()
+    } catch (error) {
+        console.log(error)
+        return
+    }
     let zeroBalanceAddress = []
     for (let address of accounts.keys()) {
         let balance = await sep20Contract.balanceOf(address)
@@ -91,7 +115,7 @@ async function getSep20Info(sep20Address, createdBlockNum, latestBlockNum) {
     accountArray.sort((a, b) => b[1] - a[1])
     accounts = new Map(accountArray.map(i=>[i[0], i[1]]))
 
-    let title = `name:${name}\nsymbol:${symbol}\naddress:${sep20Address}\ndecimals:${decimals}\ntotalSupply:${ethers.utils.formatUnits(totalSupply, decimals)}\naccount amount:${accounts.size}\naccounts:\n`
+    let title = `name:${name}\nsymbol:${symbol}\naddress:${sep20Address}\ndecimals:${decimals}\ntotalSupply:${ethers.utils.formatUnits(totalSupply, decimals)}\ncreated block:${createdBlockNum}\naccount amount:${accounts.size}\naccounts:\n`
     let path = PrePath + name.replace(' ', '-') + sep20Address
     await fs.writeFileSync(path, title+ JSON.stringify([...accounts], null, " "))
     console.log(`write ${name} in file`)
