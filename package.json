@@ -1,0 +1,23 @@
+{
+  "name": "chaintools",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/smartbch/chaintools.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/smartbch/chaintools/issues"
+  },
+  "homepage": "https://github.com/smartbch/chaintools#readme",
+  "dependencies": {
+    "ethers": "^5.4.6",
+    "mkdirp": "^1.0.4"
+  }
+}
