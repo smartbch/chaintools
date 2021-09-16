@@ -50,6 +50,9 @@ async function work() {
 }
 
 async function getSep20Info(sep20Address, createdBlockNum, latestBlockNum) {
+    const createdBlock = Provider.getBlock(createdBlockNum)
+    const createdTime = new Date().setTime(createdBlock.timestamp*1000)
+    const createdTimeStr = createdTime.toLocaleDateString()
     console.log(createdBlockNum)
     let accounts = new Map()
     let startBlockNum = createdBlockNum
@@ -115,9 +118,15 @@ async function getSep20Info(sep20Address, createdBlockNum, latestBlockNum) {
     accountArray.sort((a, b) => b[1] - a[1])
     accounts = new Map(accountArray.map(i=>[i[0], i[1]]))
 
-    let title = `name:${name}\nsymbol:${symbol}\naddress:${sep20Address}\ndecimals:${decimals}\ntotalSupply:${ethers.utils.formatUnits(totalSupply, decimals)}\ncreated block:${createdBlockNum}\naccount amount:${accounts.size}\naccounts:\n`
-    let path = PrePath + name.replace(' ', '-') + sep20Address
-    await fs.writeFileSync(path, title+ JSON.stringify([...accounts], null, " "))
+    const currTimeStr = Date.now().toLocaleDateString()
+    let title = `scan time:${currTimeStr}\nname:${name}\nsymbol:${symbol}\naddress:${sep20Address}\ndecimals:${decimals}\ntotalSupply:${ethers.utils.formatUnits(totalSupply, decimals)}\ncreated time:${createdTimeStr}\naccount amount:${accounts.size}\naccounts:\n`
+    let path = PrePath + symbol.replace(' ', '-') + sep20Address
+    let content = ""
+    for(var i=0; i<accounts.length; i++) {
+	content += ("  - "+accounts[i][0]+": ")
+	content += (accounts[i][1]+"\n")
+    }
+    await fs.writeFileSync(path, title+content)
     console.log(`write ${name} in file`)
 }
 
