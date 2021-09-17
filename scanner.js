@@ -53,7 +53,7 @@ async function work() {
         console.log(`scan SEP20s between ${filter.fromBlock} and ${filter.toBlock}`)
 
         let logs = await Provider.getLogs(filter)
-        logs.forEach(log => sep20s.set(log.address, Math.min(newSep20s.has(log.address) ? newSep20s.get(log.address) : MaxBlockNum, log.blockNumber)))
+        logs.forEach(log => newSep20s.set(log.address, Math.min(newSep20s.has(log.address) ? newSep20s.get(log.address) : MaxBlockNum, log.blockNumber)))
         preBlockNum = filter.toBlock
     }
 
