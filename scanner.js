@@ -57,9 +57,9 @@ async function work() {
         preBlockNum = filter.toBlock
     }
 
-    while (genesisBlockNum < preBlockNum) {
+    while (genesisBlockNum < config.previousBlockNumber) {
         filter.fromBlock = genesisBlockNum
-        filter.toBlock = Math.min(genesisBlockNum + Step, blockNum)
+        filter.toBlock = Math.min(genesisBlockNum + Step, config.previousBlockNumber)
         console.log(`scan SEP20s between ${filter.fromBlock} and ${filter.toBlock}`)
 
         let logs = await Provider.getLogs(filter)
@@ -81,10 +81,8 @@ async function work() {
 }
 
 async function getSep20Info(sep20Address, createdBlockNum, latestBlockNum, isNew) {
-    const createdBlock = Provider.getBlock(createdBlockNum)
-    const createdTime = new Date().setTime(createdBlock.timestamp*1000)
-    const createdTimeStr = createdTime.toLocaleDateString()
-    console.log(createdBlockNum)
+    const createdBlock = await Provider.getBlock(createdBlockNum)
+    const createdTimeStr = new Date(createdBlock.timestamp*1000).toLocaleDateString()
     let accounts = new Map()
     let startBlockNum = createdBlockNum
     let filter = {
@@ -149,7 +147,7 @@ async function getSep20Info(sep20Address, createdBlockNum, latestBlockNum, isNew
     accountArray.sort((a, b) => b[1] - a[1])
     accounts = new Map(accountArray.map(i=>[i[0], i[1]]))
 
-    const currTimeStr = Date.now().toLocaleDateString()
+    const currTimeStr = new Date(Date.now()).toLocaleDateString()
     let title = `scan time:${currTimeStr}\nname:${name}\nsymbol:${symbol}\naddress:${sep20Address}\ndecimals:${decimals}\ntotalSupply:${ethers.utils.formatUnits(totalSupply, decimals)}\ncreated time:${createdTimeStr}\naccount amount:${accounts.size}\naccounts:\n`
     let path = PrePath + symbol.replace(' ', '-') + sep20Address
     let content = ""
