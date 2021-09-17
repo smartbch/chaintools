@@ -2,9 +2,12 @@ const {ethers} = require("ethers")
 const fs = require('fs')
 const mkdirp = require('mkdirp')
 
-const Step = 5000
+const Step = 1000
 const MaxBlockNum = 999999999999
+const ConfigPath = 'config.txt'
 const PrePath = './seps20/'
+const NewSep20sPath = 'new_sep20s.txt'
+const HotTokenHolderThreshold = 50
 const Provider = new ethers.providers.JsonRpcProvider('http://18.138.237.114:8545');
 const SEP20ABI = [
     "function name() view returns (string)",
@@ -19,7 +22,7 @@ const SEP20ABI = [
     "event Transfer(address indexed from, address indexed to, uint256 value)",
     "event Approval(address indexed owner, address indexed spender, uint256 value)"]
 
-let preBlockNum = 200000
+let genesisBlockNum = 200000
 
 let filter = {
     topics: [
@@ -32,24 +35,52 @@ let sep20s = new Map()
 async function work() {
     let blockNum = await Provider.getBlockNumber()
     console.log('latest block: ' + blockNum)
+    let config = {}
+    try {
+        const jsonString = await fs.readFileSync(ConfigPath)
+        config = JSON.parse(jsonString)
+    } catch(err) {
+        console.log(err)
+        config.previousBlockNumber = 550000
+        await fs.writeFileSync(ConfigPath, JSON.stringify(config))
+    }
+    let preBlockNum = config.previousBlockNumber
+
+    let newSep20s = new Map()
     while (preBlockNum < blockNum) {
         filter.fromBlock = preBlockNum
         filter.toBlock = Math.min(preBlockNum + Step, blockNum)
         console.log(`scan SEP20s between ${filter.fromBlock} and ${filter.toBlock}`)
 
         let logs = await Provider.getLogs(filter)
-        logs.forEach(log => sep20s.set(log.address, Math.min(sep20s.has(log.address) ? sep20s.get(log.address) : MaxBlockNum, log.blockNumber)))
+        logs.forEach(log => sep20s.set(log.address, Math.min(newSep20s.has(log.address) ? newSep20s.get(log.address) : MaxBlockNum, log.blockNumber)))
         preBlockNum = filter.toBlock
+    }
+
+    while (genesisBlockNum < preBlockNum) {
+        filter.fromBlock = genesisBlockNum
+        filter.toBlock = Math.min(genesisBlockNum + Step, blockNum)
+        console.log(`scan SEP20s between ${filter.fromBlock} and ${filter.toBlock}`)
+
+        let logs = await Provider.getLogs(filter)
+        logs.forEach(log => sep20s.set(log.address, Math.min(sep20s.has(log.address) ? sep20s.get(log.address) : MaxBlockNum, log.blockNumber)))
+        genesisBlockNum = filter.toBlock
     }
 
     for (let address of sep20s.keys()) {
         console.log('scanning ' + address);
         await getSep20Info(address, sep20s.get(address), blockNum)
     }
+    for (let address of newSep20s.keys()) {
+        console.log('scanning ' + address);
+        await getSep20Info(address, newSep20s.get(address), blockNum, true)
+    }
+    config.previousBlockNumber = blockNum
+    await fs.writeFileSync(ConfigPath, JSON.stringify(config))
     console.log('finish scanning!')
 }
 
-async function getSep20Info(sep20Address, createdBlockNum, latestBlockNum) {
+async function getSep20Info(sep20Address, createdBlockNum, latestBlockNum, isNew) {
     const createdBlock = Provider.getBlock(createdBlockNum)
     const createdTime = new Date().setTime(createdBlock.timestamp*1000)
     const createdTimeStr = createdTime.toLocaleDateString()
@@ -128,6 +159,11 @@ async function getSep20Info(sep20Address, createdBlockNum, latestBlockNum) {
     }
     await fs.writeFileSync(path, title+content)
     console.log(`write ${name} in file`)
+
+    if (isNew && accounts.size > HotTokenHolderThreshold) {
+        let content = `scan time:${currTimeStr}\nname:${name}\nsymbol:${symbol}\naddress:${sep20Address}\ndecimals:${decimals}\ntotalSupply:${ethers.utils.formatUnits(totalSupply, decimals)}\ncreated time:${createdTimeStr}\naccount amount:${accounts.size}\n`
+        await fs.appendFileSync(NewSep20sPath, content)
+    }
 }
 
 async function main() {
