@@ -39,7 +39,7 @@ async function work() {
     try {
         const jsonString = await fs.readFileSync(ConfigPath)
         config = JSON.parse(jsonString)
-    } catch(err) {
+    } catch (err) {
         console.log(err)
         config.previousBlockNumber = 550000
         await fs.writeFileSync(ConfigPath, JSON.stringify(config))
@@ -66,14 +66,13 @@ async function work() {
         logs.forEach(log => sep20s.set(log.address, Math.min(sep20s.has(log.address) ? sep20s.get(log.address) : MaxBlockNum, log.blockNumber)))
         genesisBlockNum = filter.toBlock
     }
-
+    for (let address of newSep20s.keys()) {
+        console.log('scanning new seps20 ' + address);
+        await getSep20Info(address, newSep20s.get(address), blockNum, true)
+    }
     for (let address of sep20s.keys()) {
         console.log('scanning ' + address);
-        await getSep20Info(address, sep20s.get(address), blockNum)
-    }
-    for (let address of newSep20s.keys()) {
-        console.log('scanning ' + address);
-        await getSep20Info(address, newSep20s.get(address), blockNum, true)
+        await getSep20Info(address, sep20s.get(address), blockNum, false)
     }
     config.previousBlockNumber = blockNum
     await fs.writeFileSync(ConfigPath, JSON.stringify(config))
@@ -82,7 +81,7 @@ async function work() {
 
 async function getSep20Info(sep20Address, createdBlockNum, latestBlockNum, isNew) {
     const createdBlock = await Provider.getBlock(createdBlockNum)
-    const createdTimeStr = new Date(createdBlock.timestamp*1000).toLocaleDateString()
+    const createdTimeStr = new Date(createdBlock.timestamp * 1000).toLocaleDateString()
     let accounts = new Map()
     let startBlockNum = createdBlockNum
     let filter = {
@@ -145,19 +144,21 @@ async function getSep20Info(sep20Address, createdBlockNum, latestBlockNum, isNew
 
     let accountArray = Array.from(accounts)
     accountArray.sort((a, b) => b[1] - a[1])
-    accounts = new Map(accountArray.map(i=>[i[0], i[1]]))
+    accounts = new Map(accountArray.map(i => [i[0], i[1]]))
 
     const currTimeStr = new Date(Date.now()).toLocaleDateString()
     let title = `scan time:${currTimeStr}\nname:${name}\nsymbol:${symbol}\naddress:${sep20Address}\ndecimals:${decimals}\ntotalSupply:${ethers.utils.formatUnits(totalSupply, decimals)}\ncreated time:${createdTimeStr}\naccount amount:${accounts.size}\naccounts:\n`
     let path = PrePath + symbol.replace(' ', '-') + sep20Address
     let content = ""
-    for(var i=0; i<accounts.length; i++) {
-	content += ("  - "+accounts[i][0]+": ")
-	content += (accounts[i][1]+"\n")
+    for (let address of accounts.keys()) {
+        content += `  - ${address}: ${accounts.get(address)}\n`
     }
-    await fs.writeFileSync(path, title+content)
+    await fs.writeFileSync(path, title + content)
     console.log(`write ${name} in file`)
 
+    if (isNew) {
+        console.log('newToken, size is:', accounts.size)
+    }
     if (isNew && accounts.size > HotTokenHolderThreshold) {
         let content = `scan time:${currTimeStr}\nname:${name}\nsymbol:${symbol}\naddress:${sep20Address}\ndecimals:${decimals}\ntotalSupply:${ethers.utils.formatUnits(totalSupply, decimals)}\ncreated time:${createdTimeStr}\naccount amount:${accounts.size}\n`
         await fs.appendFileSync(NewSep20sPath, content)
