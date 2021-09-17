@@ -160,7 +160,7 @@ async function getSep20Info(sep20Address, createdBlockNum, latestBlockNum, isNew
         console.log('newToken, size is:', accounts.size)
     }
     if (isNew && accounts.size > HotTokenHolderThreshold) {
-        let content = `scan time:${currTimeStr}\nname:${name}\nsymbol:${symbol}\naddress:${sep20Address}\ndecimals:${decimals}\ntotalSupply:${ethers.utils.formatUnits(totalSupply, decimals)}\ncreated time:${createdTimeStr}\naccount amount:${accounts.size}\n`
+        let content = `scan time:${currTimeStr},name:${name},symbol:${symbol},address:${sep20Address},totalSupply:${ethers.utils.formatUnits(totalSupply, decimals)},account amount:${accounts.size}\n`
         await fs.appendFileSync(NewSep20sPath, content)
     }
 }
